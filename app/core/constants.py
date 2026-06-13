@@ -1,0 +1,1 @@
+EMERGENCY_KEYWORDS = ["chest pain", "breathing difficulty", "unconscious"]
