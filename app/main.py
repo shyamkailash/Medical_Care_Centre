@@ -1,31 +1,29 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from fastapi import FastAPI
+from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+from app.llm.chatbot import chat
 
-model_name = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+app = FastAPI(title="Medical Care Centre API")
 
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(model_name)
-
-messages = [
-    {"role": "system", "content": "You are a medical assistant chatbot. Do not diagnose diseases."},
-    {"role": "user", "content": "I have fever and headache"}
-]
-
-# IMPORTANT: correct chat formatting
-input_text = tokenizer.apply_chat_template(
-    messages,
-    tokenize=False,
-    add_generation_prompt=True
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-inputs = tokenizer(input_text, return_tensors="pt")
+class ChatRequest(BaseModel):
+    message: str
 
-outputs = model.generate(
-    **inputs,
-    max_new_tokens=120,
-    temperature=0.7,
-    do_sample=True
-)
+@app.get("/")
+def home():
+    return {"message": "Medical Care Centre Backend Running"}
 
-response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-print(response)
+@app.post("/chat")
+def chatbot_response(request: ChatRequest):
+    try:
+        response = chat(request.message)
+        return {"response": response}
+    except Exception as e:
+        return {"response": f"Backend error: {str(e)}"}
